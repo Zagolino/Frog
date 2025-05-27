@@ -76,12 +76,7 @@
         pressure = p
         use_displaced_mesh = false  
     []
-    [Mxt]
-        type = INSMomentumTimeDerivative
-
-        variable = vel_x
-
-    []
+   
     [Mx]
         type = INSMomentumLaplaceForm
         component = 0
@@ -91,12 +86,7 @@
         v = vel_y
         w = vel_z
     []
-    [Myt]
-        type = INSMomentumTimeDerivative
 
-        variable = vel_y
-
-    []
     [My]
         type = INSMomentumLaplaceForm
         variable = vel_y
@@ -106,12 +96,7 @@
         pressure = p
         w = vel_z
     []
-    [Mzt]
-        type = INSMomentumTimeDerivative
 
-        variable = vel_z
-
-    []
     [Mz]
         type = INSMomentumLaplaceForm
         variable = vel_z
@@ -122,14 +107,7 @@
         w = vel_z
     []
 
-    [convec]
-        type = INSTemperature
-        variable = T
-        u = vel_x
-        v = vel_y
-        w = vel_z
-
-    []
+ 
     [temp_time]
         type = CoefTimeDerivative
         variable = T
@@ -157,32 +135,21 @@
         variable = T
     []
 
-    [inx]
-        type = DirichletBC
-        variable = vel_x
-        boundary = 'front'
-        value = 0
-    [] 
 
-    [iny]
-        type = DirichletBC
-        variable = vel_y
-        boundary = 'front'
-        value = 0
-    [] 
+
 
     [inz]
         type = DirichletBC
         variable = vel_z
         boundary = 'front'
-        value = -0.1
+        value = -0.00552
     [] 
 
     [saida]
-        type = DirichletBC
+        type = NeumannBC
         variable = p
         boundary = 'back'
-        value = 0
+        
     []
 
     # Paredes
@@ -198,12 +165,13 @@
         boundary = 'top bottom left right'
         value = 0
     []
-    [adiabatic]
-        type = NeumannBC
-        variable = T
+    [slipz]
+        type = DirichletBC
+        variable = vel_z
         boundary = 'top bottom left right'
-        value = 10000
+        value = 0
     []
+    
     
 []
 
