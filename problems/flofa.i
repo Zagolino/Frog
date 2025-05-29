@@ -7,13 +7,13 @@
         dim = 3
         xmax = 0.076
         xmin = 0
-        nx = 10
+        nx = 15
         ymax = 0.08
         ymin = 0
-        ny = 10
+        ny = 15
         zmax = 0.6
         zmin = 0
-        nz = 20
+        nz = 40
         
     []
 
@@ -22,30 +22,37 @@
 
 
 [Variables]
-    [T]
-        family = LAGRANGE
-        order = FIRST
-        initial_condition = 300
-        block = 0
-    []
+    # [T]
+    #     family = LAGRANGE
+    #     order = FIRST
+    #     initial_condition = 300
+    #     block = 0
+    # []
     [vel_x]
         order = FIRST
         family = LAGRANGE
         block = 0
+        initial_condition = 0
     []
     [vel_y]
         order = FIRST
         family = LAGRANGE
         block = 0
+        initial_condition = 0
     []
     [vel_z]
         order = FIRST
         family = LAGRANGE
         block = 0
+        initial_condition = 0
     []
     [p]
+        order = FIRST
+        family = LAGRANGE
         block = 0
+        initial_condition = 0
     []
+    
 
 []
 
@@ -55,14 +62,14 @@
 
     [props]
         type = GenericConstantMaterial
-        prop_names = 'mu rho k cp'
-        prop_values = '0.00089 997 0.6 4182'
+        prop_names = 'mu rho'
+        prop_values = '0.00089 997'
         
     []
-    [thermal]
-        type = HeatConductionMaterial
-        thermal_conductivity = 0.6
-    []
+    # [thermal]
+    #     type = HeatConductionMaterial
+    #     thermal_conductivity = 0.6
+    # []
 
 []
 
@@ -76,96 +83,140 @@
         pressure = p
         use_displaced_mesh = false  
     []
-   
+    # [Mxt]
+    #     type = INSMomentumTimeDerivative
+    #     variable = vel_x
+    #     rho_name = rho
+    # []
     [Mx]
         type = INSMomentumLaplaceForm
-        component = 0
-        pressure = p
-        u = vel_x
         variable = vel_x
+        u = vel_x
         v = vel_y
         w = vel_z
+        pressure = p
+        component = 0
+        integrate_p_by_parts = true
+        rho_name = rho
+        mu_name = mu
     []
 
+    # [Myt]
+    #     type = INSMomentumTimeDerivative
+    #     variable = vel_y
+    #     rho_name = rho
+    # []
     [My]
         type = INSMomentumLaplaceForm
         variable = vel_y
-        component = 1
         u = vel_x
         v = vel_y
-        pressure = p
         w = vel_z
+        pressure = p
+        component = 1
+        integrate_p_by_parts = true
+        rho_name = rho
+        mu_name = mu
     []
 
+    # [Mzt]
+    #     type = INSMomentumTimeDerivative
+    #     variable = vel_z
+    #     rho_name = rho
+    # []
     [Mz]
         type = INSMomentumLaplaceForm
         variable = vel_z
-        component = 2
         u = vel_x
         v = vel_y
-        pressure = p
         w = vel_z
+        pressure = p
+        component = 2
+        integrate_p_by_parts = true
+        rho_name = rho
+        mu_name = mu
     []
 
  
-    [temp_time]
-        type = CoefTimeDerivative
-        variable = T
-        Coefficient = ${fparse 997*4182}
-    []
+    # [temp_time]
+    #     type = CoefTimeDerivative
+    #     variable = T
+    #     Coefficient = ${fparse 997*4182}
+    # []
 
-    [conduc]
-        type = HeatConduction
-        variable = T
+    # [conduc]
+    #     type = HeatConduction
+    #     variable = T
         
-    []
+    # []
 
-    [fonte]
-        type = BodyForce
-        variable = T
-        value = '150000'
-    []
+    # [fonte]
+    #     type = BodyForce
+    #     variable = T
+    #     value = '1000'
+    # []
 []
 
 [BCs]
-    [entrada]
+    # [entrada]
+    #     type = DirichletBC
+    #     boundary = 'front'
+    #     value = 300
+    #     variable = T
+    # []
+
+    
+
+    [inlet_x]
         type = DirichletBC
+        variable = vel_x
         boundary = 'front'
-        value = 300
-        variable = T
+        value = 0
     []
 
-
-
-
-    [inz]
+    [inlet_y]
         type = DirichletBC
+        variable = vel_y
+        boundary = 'front'
+        value = 0
+    []
+    [inlet_z]
+        type = FunctionDirichletBC  
         variable = vel_z
         boundary = 'front'
-        value = -0.00552
+        function = '0.055/(997*0.076*0.08)'
     [] 
 
-    [saida]
-        type = NeumannBC
+   
+    [pressure_pin]
+        type = DirichletBC  
         variable = p
-        boundary = 'back'
+        boundary = 'front'
+        value = 0
         
     []
+    # [Tf]
+    #     type = NeumannBC
+    #     variable = T
+    #     boundary = 'back'
+    # []
+
+
 
     # Paredes
-    [slipx]
+    [walls_x]
         type = DirichletBC
         variable = vel_x
         boundary = 'top bottom left right'
         value = 0
     []
-    [slipy]
+    [walls_y]
         type = DirichletBC
         variable = vel_y
         boundary = 'top bottom left right'
         value = 0
     []
-    [slipz]
+    [walls_z]
         type = DirichletBC
         variable = vel_z
         boundary = 'top bottom left right'
@@ -175,31 +226,32 @@
     
 []
 
+[Preconditioning]
+  [SMP]
+    type = SMP
+    full = true
+    # Improved settings for incompressible flow
+    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type -ksp_type -ksp_rtol -ksp_atol -snes_linesearch_type'
+    petsc_options_value = 'lu       superlu_dist             NONZERO               gmres     1e-4     1e-8      basic'
+  []
+[]
+
 [Executioner]
-    type = Transient
-    start_time = 0
-    
-    end_time = 10
-    dtmin = 1e-4
-    dtmax = 10
+    type = Steady
     solve_type = 'NEWTON'
-    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type -ksp_type -ksp_rtol'
-    petsc_options_value = 'lu       superlu_dist             NONZERO               gmres     1e-4'
-    line_search = 'bt'
-    nl_max_its = 15
-    l_max_its = 50
+    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type'
+    petsc_options_value = 'lu       superlu_dist             NONZERO'
     nl_rel_tol = 1e-6
     nl_abs_tol = 1e-8
-    [TimeStepper]
-        type = IterationAdaptiveDT
-        dt = 0.1
-        optimal_iterations = 8
-        iteration_window = 2
-        growth_factor = 1.2
-        cutback_factor = 0.25
-    []
+    relaxation_factor = 0.7
+    automatic_scaling = true
 []
 
 [Outputs]
     exodus = true
+    print_linear_residuals = true
+    [console]
+        type = Console
+        outlier_variable_norms = false
+    []
 []
