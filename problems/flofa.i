@@ -28,27 +28,14 @@
     #     initial_condition = 300
     #     block = 0
     # []
-    [vel_x]
+    [velocity]
+        family = LAGRANGE_VEC
         order = FIRST
-        family = LAGRANGE
-        block = 0
-        initial_condition = 0
-    []
-    [vel_y]
-        order = FIRST
-        family = LAGRANGE
-        block = 0
-        initial_condition = 0
-    []
-    [vel_z]
-        order = FIRST
-        family = LAGRANGE
-        block = 0
-        initial_condition = 0
+        initial_condition = '0 0 0'
     []
     [p]
-        order = FIRST
         family = LAGRANGE
+        order = FIRST
         block = 0
         initial_condition = 0
     []
@@ -61,80 +48,56 @@
 [Materials]
 
     [props]
-        type = GenericConstantMaterial
-        prop_names = 'mu rho'
-        prop_values = '0.00089 997'
+        type = ADGenericConstantMaterial
+        prop_names = 'mu rho cp k'
+        prop_values = '0.00089 997 4182 0.6'
         
     []
     # [thermal]
     #     type = HeatConductionMaterial
     #     thermal_conductivity = 0.6
     # []
+    [ins_mat]
+        type = INSADStabilized3Eqn
+        velocity = velocity
+        pressure = p
+        temperature = 300
+    []
 
 []
 
 [Kernels]
     [massa]
-        type = INSMass
-        u = vel_x
-        v = vel_y
-        w = vel_z
+        type = INSADMass
         variable = p
-        pressure = p
-        use_displaced_mesh = false  
     []
-    # [Mxt]
-    #     type = INSMomentumTimeDerivative
-    #     variable = vel_x
-    #     rho_name = rho
-    # []
-    [Mx]
-        type = INSMomentumLaplaceForm
-        variable = vel_x
-        u = vel_x
-        v = vel_y
-        w = vel_z
-        pressure = p
-        component = 0
-        integrate_p_by_parts = true
+    [massa_stab]
+        type = INSADMassPSPG
+        variable = p
         rho_name = rho
-        mu_name = mu
+    []
+    [momentum_time]
+        type = INSADMomentumTimeDerivative
+        variable = velocity
+    []
+    [momentum_advec]
+        type = INSADMomentumAdvection
+        variable = velocity
+    []
+    [momentum_visc]
+        type = INSADMomentumViscous
+        variable = velocity
     []
 
-    # [Myt]
-    #     type = INSMomentumTimeDerivative
-    #     variable = vel_y
-    #     rho_name = rho
-    # []
-    [My]
-        type = INSMomentumLaplaceForm
-        variable = vel_y
-        u = vel_x
-        v = vel_y
-        w = vel_z
+    [momentum_pressure]
+        type = INSADMomentumPressure
+        variable = velocity
         pressure = p
-        component = 1
-        integrate_p_by_parts = true
-        rho_name = rho
-        mu_name = mu
     []
-
-    # [Mzt]
-    #     type = INSMomentumTimeDerivative
-    #     variable = vel_z
-    #     rho_name = rho
-    # []
-    [Mz]
-        type = INSMomentumLaplaceForm
-        variable = vel_z
-        u = vel_x
-        v = vel_y
-        w = vel_z
-        pressure = p
-        component = 2
-        integrate_p_by_parts = true
-        rho_name = rho
-        mu_name = mu
+    [momentum_supg]
+        type = INSADMomentumSUPG
+        variable = velocity
+        velocity = velocity
     []
 
  
@@ -167,31 +130,21 @@
 
     
 
-    [inlet_x]
-        type = DirichletBC
-        variable = vel_x
+    [inlet]
+        type = VectorFunctionDirichletBC
+        variable = velocity
         boundary = 'front'
-        value = 0
+        function_x = 0
+        function_y = 0
+        function_z = '0.055/(997*0.076*0.08)'
     []
 
-    [inlet_y]
-        type = DirichletBC
-        variable = vel_y
-        boundary = 'front'
-        value = 0
-    []
-    [inlet_z]
-        type = FunctionDirichletBC  
-        variable = vel_z
-        boundary = 'front'
-        function = '0.055/(997*0.076*0.08)'
-    [] 
 
    
     [pressure_pin]
         type = DirichletBC  
         variable = p
-        boundary = 'front'
+        boundary = 'back'
         value = 0
         
     []
@@ -204,47 +157,47 @@
 
 
     # Paredes
-    [walls_x]
-        type = DirichletBC
-        variable = vel_x
+    [walls]
+        type = VectorFunctionDirichletBC
+        variable = velocity
         boundary = 'top bottom left right'
-        value = 0
+        function_x = 0
+        function_y = 0
+        function_z = 0
     []
-    [walls_y]
-        type = DirichletBC
-        variable = vel_y
-        boundary = 'top bottom left right'
-        value = 0
-    []
-    [walls_z]
-        type = DirichletBC
-        variable = vel_z
-        boundary = 'top bottom left right'
-        value = 0
-    []
+
     
     
 []
 
 [Preconditioning]
-  [SMP]
-    type = SMP
-    full = true
-    # Improved settings for incompressible flow
-    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type -ksp_type -ksp_rtol -ksp_atol -snes_linesearch_type'
-    petsc_options_value = 'lu       superlu_dist             NONZERO               gmres     1e-4     1e-8      basic'
-  []
+    [SMP]
+        type = SMP
+        full = true
+        petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type -ksp_type -ksp_rtol -ksp_atol'
+        petsc_options_value = 'lu       superlu_dist             NONZERO               gmres     1e-6     1e-8'
+    []
 []
 
+
 [Executioner]
-    type = Steady
+    type = Transient  # Start transient even for steady flow
+    start_time = 0
+    end_time = 50
+    dt = 0.5
     solve_type = 'NEWTON'
-    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type'
-    petsc_options_value = 'lu       superlu_dist             NONZERO'
-    nl_rel_tol = 1e-6
+    petsc_options_iname = '-pc_type -pc_factor_shift_type'
+    petsc_options_value = 'lu NONZERO'
     nl_abs_tol = 1e-8
-    relaxation_factor = 0.7
+    nl_rel_tol = 1e-6
+    line_search = 'bt'  # Backtracking line search
     automatic_scaling = true
+    [TimeStepper]
+        type = IterationAdaptiveDT
+        optimal_iterations = 6
+        dt = 0.1
+        cutback_factor = 0.5
+    []
 []
 
 [Outputs]
