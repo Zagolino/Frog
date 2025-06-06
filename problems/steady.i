@@ -2,22 +2,20 @@
 
 
 [Mesh]
-    # [bloco]
-    #   type = GeneratedMeshGenerator
-        # dim = 3
-        # xmax = 2.23e-3
-        # xmin = 0
-        # nx = 30
-        # ymax = 6.65e-2
-        # ymin = 0
-        # ny = 30
-        # zmax = 0.6
-        # zmin = 0
-        # nz = 80
+    [bloco]
+        type = GeneratedMeshGenerator
+        dim = 3
+        xmax = 2.23e-3
+        xmin = 0
+        nx = 15
+        ymax = 6.65e-2
+        ymin = 0
+        ny = 15
+        zmax = 0.6
+        zmin = 0
+        nz = 40
         
-    # []
-
-    file = 'steady_out.e'
+    []
 
 []
 
@@ -28,7 +26,7 @@
     [velocity]
         family = LAGRANGE_VEC
         order = FIRST
-        initial_condition = '1e-15 1e-15 1e-15'
+        initial_condition = '0 0 0'
     []
     [p]
         family = LAGRANGE
@@ -44,12 +42,7 @@
 
 []
 
-[Functions]
-    [wall_flux]
-        type = ParsedFunction
-        expression = '4.104e5 * cos(2 * pi * z / 0.7)'
-    []
-[]
+
 
 [Materials]
 
@@ -59,16 +52,15 @@
         prop_values = '0.00089 997 4182 0.6'
         
     []
-
+    [thermal]
+        type = HeatConductionMaterial
+        thermal_conductivity = 0.6
+    []
     [ins_mat]
         type = INSADStabilized3Eqn
         velocity = velocity
         pressure = p
-        temperature = T
-        cp_name = 'cp'
-        k_name = 'k'
-        mu_name = 'mu'
-        rho_name = 'rho'
+        temperature = 300
     []
 
 []
@@ -83,10 +75,7 @@
         variable = p
         rho_name = rho
     []
-    [momentum_time]
-        type = INSADMomentumTimeDerivative
-        variable = velocity
-    []
+    
     [momentum_advec]
         type = INSADMomentumAdvection
         variable = velocity
@@ -106,18 +95,9 @@
         variable = velocity
         velocity = velocity
     []
-    [momentum_gravity]
-        type = INSADGravityForce
-        variable = velocity
-        gravity = '0 0 -9.8'
-    []
 
     [energy_advec]
         type = INSADEnergyAdvection
-        variable = T
-    []
-    [energy_advec_time]
-        type = INSADHeatConductionTimeDerivative
         variable = T
     []
     [energy_supg]
@@ -125,18 +105,12 @@
         variable = T
         velocity = velocity
     []
-
-    # [energy_source]
-    #     type = INSADEnergySource
-    #     variable = T
-    #     source_function = 10e7
-    # []
     [energy_conduc]
         type = ADHeatConduction
         variable = T
         thermal_conductivity = 'k'
     []
-
+ 
     
 []
 
@@ -145,13 +119,13 @@
 
     
 
-    [inlet_vel]
+    [inlet]
         type = VectorFunctionDirichletBC
         variable = velocity
         boundary = 'front'
         function_x = 0
         function_y = 0
-        function_z = '0.055/(997*0.063*0.00223)'
+        function_z = '0.055/(997*0.065*0.00223)'
     []
     [inlet_T]
         type = DirichletBC
@@ -159,6 +133,7 @@
         boundary = 'front'
         value = 300
     []
+
 
    
     [pressure_pin]
@@ -169,8 +144,11 @@
         
     []
 
+
+
+
     # Paredes
-    [walls_vel]
+    [walls]
         type = VectorFunctionDirichletBC
         variable = velocity
         boundary = 'top bottom left right'
@@ -181,14 +159,8 @@
     [walls_T]
         type = NeumannBC
         variable = T
-        boundary = 'top bottom'
+        boundary = 'top bottom left right'
         value = 0
-    []
-    [walls_Tflux]
-        type = FunctionNeumannBC
-        variable = T
-        boundary = 'left right'
-        function = wall_flux
     []
 
 []
@@ -204,28 +176,23 @@
 
 
 [Executioner]
-    type = Transient  
-    start_time = 0
-    end_time = 5
-    dt = 0.001
-    nl_max_its = 150
+    type = Steady
+
+
+    nl_max_its = 800
     solve_type = 'NEWTON'
-    petsc_options_iname = '-pc_type -pc_factor_shift_type -ksp_type'
-    petsc_options_value = 'lu NONZERO gmres'
-    nl_abs_tol = 1e-7
-    nl_rel_tol = 1e-5
-    line_search = 'bt'  
+    petsc_options_iname = '-pc_type -pc_factor_shift_type'
+    petsc_options_value = 'lu NONZERO'
+    nl_abs_tol = 1e-6
+    nl_rel_tol = 1e-4
+    line_search = 'bt' 
     automatic_scaling = true
-    [TimeStepper]
-        type = IterationAdaptiveDT
-        optimal_iterations = 6
-        dt = 0.025
-        cutback_factor = 0.5
-    []
+    
 []
 
 [Outputs]
     exodus = true
+    checkpoint = true
     print_linear_residuals = true
     [console]
         type = Console
