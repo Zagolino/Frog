@@ -44,6 +44,19 @@
 
 []
 
+# [Problem]
+#     type = FEProblem
+#     solve = false
+# []
+
+# [ICs]
+#     [initial_block_T]
+#         type = ConstantIC
+#         variable = T
+#         value = 300
+#     []
+# []
+
 [Functions]
     [wall_flux]
         type = ParsedFunction
@@ -131,11 +144,11 @@
     #     variable = T
     #     source_function = 10e7
     # []
-    [energy_conduc]
-        type = ADHeatConduction
-        variable = T
-        thermal_conductivity = 'k'
-    []
+    # [energy_conduc]
+    #     type = ADHeatConduction
+    #     variable = T
+    #     thermal_conductivity = 'k'
+    # []
 
     
 []
@@ -207,7 +220,7 @@
     type = Transient  
     start_time = 0
     end_time = 5
-    dt = 0.001
+    dt = 1e-7
     nl_max_its = 150
     solve_type = 'NEWTON'
     petsc_options_iname = '-pc_type -pc_factor_shift_type -ksp_type'
@@ -219,7 +232,7 @@
     [TimeStepper]
         type = IterationAdaptiveDT
         optimal_iterations = 6
-        dt = 0.025
+        dt = 1e-6
         cutback_factor = 0.5
     []
 []

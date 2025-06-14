@@ -7,13 +7,13 @@
         dim = 3
         xmax = 2.23e-3
         xmin = 0
-        nx = 15
+        nx = 20
         ymax = 6.65e-2
         ymin = 0
-        ny = 15
+        ny = 20
         zmax = 0.6
         zmin = 0
-        nz = 40
+        nz = 60
         
     []
 
