@@ -1,17 +1,15 @@
 rho = 'rho'
 
 velocity_interp_method = 'rc'
-advected_interp_method = 'average'
+advected_interp_method = 'upwind'
 
 
-k = 0.6
-cp = 4182
-mu = 0.00089
 
 
-inlet_temp = 300
+
+
 outlet_pressure = 1e5
-inlet_v = 0.39266493337225705
+inlet_value = -0.39
 
 [Mesh]
   [gen]
@@ -25,7 +23,7 @@ inlet_v = 0.39266493337225705
     zmax = 0.6
     nx = 15
     ny = 15
-    nz = 40
+    nz = 50
   []
 []
 
@@ -41,7 +39,9 @@ inlet_v = 0.39266493337225705
     w = vel_z
     pressure = pressure
   []
+
 []
+
 
 [Variables]
   [vel_x]
@@ -54,7 +54,7 @@ inlet_v = 0.39266493337225705
   []
   [vel_z]
     type = INSFVVelocityVariable
-    initial_condition = ${inlet_v}
+    initial_condition = ${inlet_value}
   []
   [pressure]
     type = INSFVPressureVariable
@@ -62,7 +62,7 @@ inlet_v = 0.39266493337225705
   []
   [T_fluid]
     type = INSFVEnergyVariable
-    initial_condition = ${inlet_temp}
+    initial_condition = 300
   []
 []
 
@@ -70,21 +70,61 @@ inlet_v = 0.39266493337225705
   [mixing_length]
     type = MooseVariableFVReal
   []
-  [power_density]
+
+  [k]
     type = MooseVariableFVReal
-    initial_condition = 1e4
   []
+  [cp]
+    type = MooseVariableFVReal
+  []
+  [mu]
+    type = MooseVariableFVReal
+  []
+
 []
 
 [Functions]
   [wall_flux]
     type = ParsedFunction
-    expression = '4.104e5 * cos(2 * pi * z / 0.7)'
+    # expression = '4.104e5 * cos(2 * pi * z / 0.7)'
+    expression = '4.104e3'
+  []
+  [flow_decay_function]
+    type = ParsedFunction
+    expression = 'if(t <= 1 , -0.39 , (-(0.055 * exp(-(t-1)/1.4375)))/(997*0.063*0.00223))'
+    # expression = 'if(t <= 1, -0.39, -0.6)'
   []
 []
 
+[AuxKernels]
+  
+  [mixing_len]
+    type = WallDistanceMixingLengthAux
+    walls = 'top bottom right left'
+    variable = mixing_length
+    execute_on = 'TIMESTEP_END'
+    delta = 0.5
+  []
+  [k]
+    type = MaterialRealAux
+    variable = k
+    property = k
+  []
+  [mu]
+    type = MaterialRealAux
+    variable = mu
+    property = viscosity
+  []
+  [cp]
+    type = MaterialRealAux
+    variable = cp
+    property = cp
+  []
+
+[]
+
 [FVKernels]
-  inactive = 'u_turb v_turb temp_turb'
+  inactive = ''
   [mass_time]
     type = WCNSFVMassTimeDerivative
     variable = pressure
@@ -116,8 +156,9 @@ inlet_v = 0.39266493337225705
   [u_viscosity]
     type = INSFVMomentumDiffusion
     variable = vel_x
-    mu = ${mu}
+    mu = mu
     momentum_component = 'x'
+    variable_interp_method = 'skewness-corrected'
   []
   [u_pressure]
     type = INSFVMomentumPressure
@@ -131,44 +172,6 @@ inlet_v = 0.39266493337225705
     rho = ${rho}
     mixing_length = 'mixing_length'
     momentum_component = 'x'
-    u = vel_x
-    v = vel_y
-    w = vel_z
-  []
-
-  [w_time]
-    type = WCNSFVMomentumTimeDerivative
-    variable = vel_z
-    drho_dt = drho_dt
-    rho = rho
-    momentum_component = 'z'
-  []
-  [w_advection]
-    type = INSFVMomentumAdvection
-    variable = vel_z
-    velocity_interp_method = ${velocity_interp_method}
-    advected_interp_method = ${advected_interp_method}
-    rho = ${rho}
-    momentum_component = 'z'
-  []
-  [w_viscosity]
-    type = INSFVMomentumDiffusion
-    variable = vel_z
-    momentum_component = 'z'
-    mu = ${mu}
-  []
-  [w_pressure]
-    type = INSFVMomentumPressure
-    variable = vel_z
-    momentum_component = 'z'
-    pressure = pressure
-  []
-  [w_turb]
-    type = INSFVMixingLengthReynoldsStress
-    variable = vel_z
-    rho = ${rho}
-    mixing_length = 'mixing_length'
-    momentum_component = 'z'
     u = vel_x
     v = vel_y
     w = vel_z
@@ -193,7 +196,8 @@ inlet_v = 0.39266493337225705
     type = INSFVMomentumDiffusion
     variable = vel_y
     momentum_component = 'y'
-    mu = ${mu}
+    mu = mu
+    variable_interp_method = 'skewness-corrected'
   []
   [v_pressure]
     type = INSFVMomentumPressure
@@ -212,6 +216,47 @@ inlet_v = 0.39266493337225705
     w = vel_z
   []
 
+  [w_time]
+    type = WCNSFVMomentumTimeDerivative
+    variable = vel_z
+    drho_dt = drho_dt
+    rho = rho
+    momentum_component = 'z'
+  []
+  [w_advection]
+    type = INSFVMomentumAdvection
+    variable = vel_z
+    velocity_interp_method = ${velocity_interp_method}
+    advected_interp_method = ${advected_interp_method}
+    rho = ${rho}
+    momentum_component = 'z'
+  []
+  [w_viscosity]
+    type = INSFVMomentumDiffusion
+    variable = vel_z
+    momentum_component = 'z'
+    mu = mu
+    variable_interp_method = 'skewness-corrected'
+  []
+  [w_pressure]
+    type = INSFVMomentumPressure
+    variable = vel_z
+    momentum_component = 'z'
+    pressure = pressure
+  []
+  [w_turb]
+    type = INSFVMixingLengthReynoldsStress
+    variable = vel_z
+    rho = ${rho}
+    mixing_length = 'mixing_length'
+    momentum_component = 'z'
+    u = vel_x
+    v = vel_y
+    w = vel_z
+  []
+
+  
+
   [temp_time]
     type = WCNSFVEnergyTimeDerivative
     variable = T_fluid
@@ -222,7 +267,7 @@ inlet_v = 0.39266493337225705
   []
   [temp_conduction]
     type = FVDiffusion
-    coeff = 'k'
+    coeff = k
     variable = T_fluid
   []
   [temp_advection]
@@ -231,11 +276,7 @@ inlet_v = 0.39266493337225705
     velocity_interp_method = ${velocity_interp_method}
     advected_interp_method = ${advected_interp_method}
   []
-  # [heat_source]
-  #   type = FVCoupledForce
-  #   variable = T_fluid
-  #   v = power_density
-  # []
+
   [temp_turb]
     type = WCNSFVMixingLengthEnergyDiffusion
     variable = T_fluid
@@ -245,6 +286,7 @@ inlet_v = 0.39266493337225705
     schmidt_number = 1
     u = vel_x
     v = vel_y
+    w = vel_z
   []
 []
 
@@ -279,6 +321,8 @@ inlet_v = 0.39266493337225705
     variable = T_fluid
     boundary = 'left right'
     function = wall_flux
+    # function = 0
+    
   []
 
   # Inlet
@@ -286,7 +330,7 @@ inlet_v = 0.39266493337225705
     type = INSFVInletVelocityBC
     variable = vel_x
     boundary = 'front'
-    functor = ${inlet_v}
+    functor = 0
   []
   [inlet_v]
     type = INSFVInletVelocityBC
@@ -298,58 +342,63 @@ inlet_v = 0.39266493337225705
     type = INSFVInletVelocityBC
     variable = vel_z
     boundary = 'front'
-    functor = 0.39266493337225705
+    functor = flow_decay_function
   []
   [inlet_T]
     type = FVDirichletBC
     variable = T_fluid
     boundary = 'front'
-    value = ${inlet_temp}
+    value = 300
   []
 
   [outlet_p]
     type = INSFVOutletPressureBC
     variable = pressure
     boundary = 'back'
-    function = ${outlet_pressure}
+    functor = ${outlet_pressure}
   []
 []
 
 [FluidProperties]
-  [fp]
+  [water_prop]
     type = Water97FluidProperties
   []
 []
 
-[FunctorMaterials]
-  [const_functor]
-    type = ADGenericFunctorMaterial
-    prop_names = 'cp k'
-    prop_values = '${cp} ${k}'
-  []
-  [rho]
-    type = RhoFromPTFunctorMaterial
-    fp = fp
+[Materials]
+  [fluid_props_material]
+    type = FluidPropertiesMaterialPT
+    block = 0
+    fp = water_prop
     temperature = T_fluid
     pressure = pressure
+    
+  []
+
+[]
+
+[FunctorMaterials]
+
+  [rho]
+    type = RhoFromPTFunctorMaterial
+    fp = water_prop
+    temperature = T_fluid
+    pressure = pressure
+    block = 0
   []
   [ins_fv]
     type = INSFVEnthalpyFunctorMaterial
     temperature = 'T_fluid'
     rho = ${rho}
+    fp = water_prop
+
+    pressure = pressure
+    assumed_constant_cp = false
+    block = 0
   []
 []
 
-[AuxKernels]
-  inactive = 'mixing_len'
-  [mixing_len]
-    type = WallDistanceMixingLengthAux
-    walls = 'top'
-    variable = mixing_length
-    execute_on = 'initial'
-    delta = 0.5
-  []
-[]
+
 
 
 [Executioner]
@@ -360,14 +409,16 @@ inlet_v = 0.39266493337225705
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-3
+    dt = 1e-2
     optimal_iterations = 6
+    # growth_factor = 1.5
   []
-  end_time = 15
+  end_time = 3
 
-  nl_abs_tol = 1e-9
-  nl_max_its = 50
-  line_search = 'none'
+  nl_abs_tol = 1e-7
+  nl_rel_tol = 1e-5
+  nl_max_its = 75
+  line_search = 'bt'
 
   automatic_scaling = true
   off_diagonals_in_auto_scaling = true

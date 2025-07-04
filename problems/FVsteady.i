@@ -2,7 +2,7 @@
 rho = 997
 
 velocity_interp_method = 'rc'
-advected_interp_method = 'average'
+advected_interp_method = 'upwind'
 
 
 k = 0.6
@@ -26,7 +26,7 @@ mu = 0.00089
     zmax = 0.6
     nx = 15
     ny = 15
-    nz = 50
+    nz = 60 
   []
 []
 
@@ -59,7 +59,7 @@ mu = 0.00089
   []
   [pressure]
     type = INSFVPressureVariable
-    initial_condition = 0
+    initial_condition = 1e5
   []
   # [T_fluid]
   #   type = INSFVEnergyVariable
@@ -300,7 +300,7 @@ mu = 0.00089
     type = INSFVInletVelocityBC
     variable = vel_z
     boundary = 'front'
-    functor = 0.393
+    functor = 0.38
   []
   # [inlet_T]
   #   type = FVDirichletBC
@@ -309,12 +309,21 @@ mu = 0.00089
   #   value = ${inlet_temp}
   # []
 
+  [inlet_p]
+    type = FVDirichletBC
+    variable = pressure
+    boundary = 'front'
+    value = 1e5
+  []
+
   [outlet_p]
-    type = INSFVOutletPressureBC
+    type = FVNeumannBC
     variable = pressure
     boundary = 'back'
-    function = 0
+    value = 0
   []
+
+
 []
 
 [FluidProperties]
