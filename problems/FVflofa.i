@@ -86,13 +86,13 @@ inlet_value = -0.39
 [Functions]
   [wall_flux]
     type = ParsedFunction
-    # expression = '4.104e5 * cos(2 * pi * z / 0.7)'
+    # expression = '4.104e5 * cos(pi * z / 0.7)'
     expression = '4.104e3'
   []
   [flow_decay_function]
     type = ParsedFunction
     expression = 'if(t <= 1 , -0.39 , (-(0.055 * exp(-(t-1)/1.4375)))/(997*0.063*0.00223))'
-    # expression = 'if(t <= 1, -0.39, -0.6)'
+    # expression = -0.39
   []
 []
 
@@ -413,7 +413,7 @@ inlet_value = -0.39
     optimal_iterations = 6
     # growth_factor = 1.5
   []
-  end_time = 3
+  end_time = 8
 
   nl_abs_tol = 1e-7
   nl_rel_tol = 1e-5
