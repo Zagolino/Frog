@@ -1,18 +1,15 @@
-# rho = 'rho'
-rho = 997
+rho = 'rho'
 
 velocity_interp_method = 'rc'
 advected_interp_method = 'upwind'
 
 
-k = 0.6
-cp = 4182
-mu = 0.00089
 
 
-# inlet_temp = 300
 
 
+outlet_pressure = 1e5
+inlet_value = -0.39
 
 [Mesh]
   [gen]
@@ -22,11 +19,11 @@ mu = 0.00089
     xmax = 2.23e-3
     ymin = 0
     ymax = 6.65e-2
-    zmin = 0
-    zmax = 0.6
+    zmin = -0.3
+    zmax = 0.3
     nx = 15
     ny = 15
-    nz = 60 
+    nz = 50
   []
 []
 
@@ -42,51 +39,92 @@ mu = 0.00089
     w = vel_z
     pressure = pressure
   []
+
 []
+
 
 [Variables]
   [vel_x]
     type = INSFVVelocityVariable
-    initial_condition = 0
+    initial_condition = 1e-15
   []
   [vel_y]
     type = INSFVVelocityVariable
-    initial_condition = 0
+    initial_condition = 1e-15
   []
   [vel_z]
     type = INSFVVelocityVariable
-    initial_condition = 0
+    initial_condition = ${inlet_value}
   []
   [pressure]
     type = INSFVPressureVariable
-    initial_condition = 1e5
+    initial_condition = ${outlet_pressure}
   []
-  # [T_fluid]
-  #   type = INSFVEnergyVariable
-  #   initial_condition = ${inlet_temp}
-  # []
+  [T_fluid]
+    type = INSFVEnergyVariable
+    initial_condition = 300
+  []
 []
 
-# [AuxVariables]
-#   # [mixing_length]
-#   #   type = MooseVariableFVReal
-#   # []
-#   [power_density]
-#     type = MooseVariableFVReal
-#     initial_condition = 1e4
-#   []
-# []
+[AuxVariables]
+  [mixing_length]
+    type = MooseVariableFVReal
+  []
+
+  [k]
+    type = MooseVariableFVReal
+  []
+  [cp]
+    type = MooseVariableFVReal
+  []
+  [mu]
+    type = MooseVariableFVReal
+  []
+
+[]
 
 [Functions]
   [wall_flux]
     type = ParsedFunction
-    expression = '4.104e5 * cos(2 * pi * z / 0.7)'
+    expression = '8.16e4 * cos(pi * z / 0.7)'
+    # expression = '4.104e3 * cos(pi * z / 0.7)'
+  []
+  [flow_decay_function]
+    type = ParsedFunction
+    # expression = 'if(t <= 1 , -0.39 , (-(0.055 * exp(-(t-1)/1.4375)))/(997*0.063*0.00223))'
+    expression = ${inlet_value}
+  []
+[]
+
+[AuxKernels]
+  
+  [mixing_len]
+    type = WallDistanceMixingLengthAux
+    walls = 'top bottom right left'
+    variable = mixing_length
+    execute_on = 'TIMESTEP_END'
+    delta = 0.5
+  []
+  [k]
+    type = MaterialRealAux
+    variable = k
+    property = k
+  []
+  [mu]
+    type = MaterialRealAux
+    variable = mu
+    property = viscosity
+  []
+  [cp]
+    type = MaterialRealAux
+    variable = cp
+    property = cp
   []
 
 []
 
 [FVKernels]
-  # inactive = 'u_turb v_turb temp_turb'
+  inactive = ''
   # [mass_time]
   #   type = WCNSFVMassTimeDerivative
   #   variable = pressure
@@ -118,8 +156,9 @@ mu = 0.00089
   [u_viscosity]
     type = INSFVMomentumDiffusion
     variable = vel_x
-    mu = ${mu}
+    mu = mu
     momentum_component = 'x'
+    variable_interp_method = 'skewness-corrected'
   []
   [u_pressure]
     type = INSFVMomentumPressure
@@ -127,54 +166,16 @@ mu = 0.00089
     momentum_component = 'x'
     pressure = pressure
   []
-  # [u_turb]
-  #   type = INSFVMixingLengthReynoldsStress
-  #   variable = vel_x
-  #   rho = ${rho}
-  #   mixing_length = 'mixing_length'
-  #   momentum_component = 'x'
-  #   u = vel_x
-  #   v = vel_y
-  #   w = vel_z
-  # []
-
-  # [w_time]
-  #   type = WCNSFVMomentumTimeDerivative
-  #   variable = vel_z
-  #   drho_dt = drho_dt
-  #   rho = rho
-  #   momentum_component = 'z'
-  # []
-  [w_advection]
-    type = INSFVMomentumAdvection
-    variable = vel_z
-    velocity_interp_method = ${velocity_interp_method}
-    advected_interp_method = ${advected_interp_method}
+  [u_turb]
+    type = INSFVMixingLengthReynoldsStress
+    variable = vel_x
     rho = ${rho}
-    momentum_component = 'z'
+    mixing_length = 'mixing_length'
+    momentum_component = 'x'
+    u = vel_x
+    v = vel_y
+    w = vel_z
   []
-  [w_viscosity]
-    type = INSFVMomentumDiffusion
-    variable = vel_z
-    momentum_component = 'z'
-    mu = ${mu}
-  []
-  [w_pressure]
-    type = INSFVMomentumPressure
-    variable = vel_z
-    momentum_component = 'z'
-    pressure = pressure
-  []
-  # [w_turb]
-  #   type = INSFVMixingLengthReynoldsStress
-  #   variable = vel_z
-  #   rho = ${rho}
-  #   mixing_length = 'mixing_length'
-  #   momentum_component = 'z'
-  #   u = vel_x
-  #   v = vel_y
-  #   w = vel_z
-  # []
 
   # [v_time]
   #   type = WCNSFVMomentumTimeDerivative
@@ -195,7 +196,8 @@ mu = 0.00089
     type = INSFVMomentumDiffusion
     variable = vel_y
     momentum_component = 'y'
-    mu = ${mu}
+    mu = mu
+    variable_interp_method = 'skewness-corrected'
   []
   [v_pressure]
     type = INSFVMomentumPressure
@@ -203,16 +205,57 @@ mu = 0.00089
     momentum_component = 'y'
     pressure = pressure
   []
-  # [v_turb]
-  #   type = INSFVMixingLengthReynoldsStress
-  #   variable = vel_y
-  #   rho = ${rho}
-  #   mixing_length = 'mixing_length'
-  #   momentum_component = 'y'
-  #   u = vel_x
-  #   v = vel_y
-  #   w = vel_z
+  [v_turb]
+    type = INSFVMixingLengthReynoldsStress
+    variable = vel_y
+    rho = ${rho}
+    mixing_length = 'mixing_length'
+    momentum_component = 'y'
+    u = vel_x
+    v = vel_y
+    w = vel_z
+  []
+
+  # [w_time]
+  #   type = WCNSFVMomentumTimeDerivative
+  #   variable = vel_z
+  #   drho_dt = drho_dt
+  #   rho = rho
+  #   momentum_component = 'z'
   # []
+  [w_advection]
+    type = INSFVMomentumAdvection
+    variable = vel_z
+    velocity_interp_method = ${velocity_interp_method}
+    advected_interp_method = ${advected_interp_method}
+    rho = ${rho}
+    momentum_component = 'z'
+  []
+  [w_viscosity]
+    type = INSFVMomentumDiffusion
+    variable = vel_z
+    momentum_component = 'z'
+    mu = mu
+    variable_interp_method = 'skewness-corrected'
+  []
+  [w_pressure]
+    type = INSFVMomentumPressure
+    variable = vel_z
+    momentum_component = 'z'
+    pressure = pressure
+  []
+  [w_turb]
+    type = INSFVMixingLengthReynoldsStress
+    variable = vel_z
+    rho = ${rho}
+    mixing_length = 'mixing_length'
+    momentum_component = 'z'
+    u = vel_x
+    v = vel_y
+    w = vel_z
+  []
+
+  
 
   # [temp_time]
   #   type = WCNSFVEnergyTimeDerivative
@@ -222,32 +265,29 @@ mu = 0.00089
   #   h = h
   #   dh_dt = dh_dt
   # []
-  # [temp_conduction]
-  #   type = FVDiffusion
-  #   coeff = 'k'
-  #   variable = T_fluid
-  # []
-  # [temp_advection]
-  #   type = INSFVEnergyAdvection
-  #   variable = T_fluid
-  #   velocity_interp_method = ${velocity_interp_method}
-  #   advected_interp_method = ${advected_interp_method}
-  # []
-  # [heat_source]
-  #   type = FVCoupledForce
-  #   variable = T_fluid
-  #   v = power_density
-  # []
-  # [temp_turb]
-  #   type = WCNSFVMixingLengthEnergyDiffusion
-  #   variable = T_fluid
-  #   rho = rho
-  #   cp = cp
-  #   mixing_length = 'mixing_length'
-  #   schmidt_number = 1
-  #   u = vel_x
-  #   v = vel_y
-  # []
+  [temp_conduction]
+    type = FVDiffusion
+    coeff = k
+    variable = T_fluid
+  []
+  [temp_advection]
+    type = INSFVEnergyAdvection
+    variable = T_fluid
+    velocity_interp_method = ${velocity_interp_method}
+    advected_interp_method = ${advected_interp_method}
+  []
+
+  [temp_turb]
+    type = WCNSFVMixingLengthEnergyDiffusion
+    variable = T_fluid
+    rho = rho
+    cp = cp
+    mixing_length = 'mixing_length'
+    schmidt_number = 1
+    u = vel_x
+    v = vel_y
+    w = vel_z
+  []
 []
 
 [FVBCs]
@@ -270,18 +310,20 @@ mu = 0.00089
     function = 0
   []
 
-  # [walls_T]
-  #   type = FVNeumannBC
-  #   variable = T_fluid
-  #   boundary = 'top bottom'
-  #   value = 0
-  # []
-  # [walls_Tflux]
-  #   type = FVFunctionNeumannBC
-  #   variable = T_fluid
-  #   boundary = 'left right'
-  #   function = wall_flux
-  # []
+  [walls_T]
+    type = FVNeumannBC
+    variable = T_fluid
+    boundary = 'top bottom'
+    value = 0
+  []
+  [walls_Tflux]
+    type = FVFunctionNeumannBC
+    variable = T_fluid
+    boundary = 'left right'
+    function = wall_flux
+    # function = 0
+    
+  []
 
   # Inlet
   [inlet_u]
@@ -296,80 +338,68 @@ mu = 0.00089
     boundary = 'front'
     functor = 0
   []
-  [inlet_w]
+  [inlet_z]
     type = INSFVInletVelocityBC
     variable = vel_z
     boundary = 'front'
-    functor = 0.38
+    functor = flow_decay_function
   []
-  # [inlet_T]
-  #   type = FVDirichletBC
-  #   variable = T_fluid
-  #   boundary = 'front'
-  #   value = ${inlet_temp}
-  # []
-
-  [inlet_p]
+  [inlet_T]
     type = FVDirichletBC
-    variable = pressure
+    variable = T_fluid
     boundary = 'front'
-    value = 1e5
+    value = 300
   []
 
   [outlet_p]
-    type = FVNeumannBC
+    type = INSFVOutletPressureBC
     variable = pressure
     boundary = 'back'
-    value = 0
+    functor = ${outlet_pressure}
   []
-
-
 []
 
 [FluidProperties]
-  [fp]
-    type = Water97FluidProperties 
+  [water_prop]
+    type = Water97FluidProperties
   []
+[]
+
+[Materials]
+  [fluid_props_material]
+    type = FluidPropertiesMaterialPT
+    block = 0
+    fp = water_prop
+    temperature = T_fluid
+    pressure = pressure
+    
+  []
+
 []
 
 [FunctorMaterials]
-  [const_functor]
-    type = ADGenericFunctorMaterial
-    prop_names = 'cp k rho'
-    prop_values = '${cp} ${k} ${rho}'
+
+  [rho]
+    type = RhoFromPTFunctorMaterial
+    fp = water_prop
+    temperature = T_fluid
+    pressure = pressure
+    block = 0
   []
-  # [rho]
-  #   type = RhoFromPTFunctorMaterial
-  #   fp = fp
-  #   temperature = T_fluid
-  #   pressure = pressure
-  # []
-  # [ins_fv]
-  #   type = INSFVEnthalpyFunctorMaterial
-  #   temperature = 'T_fluid'
-  #   rho = ${rho}
-  # []
-[]
+  [ins_fv]
+    type = INSFVEnthalpyFunctorMaterial
+    temperature = 'T_fluid'
+    rho = ${rho}
+    fp = water_prop
 
-# [AuxKernels]
-#   inactive = 'mixing_len'
-#   [mixing_len]
-#     type = WallDistanceMixingLengthAux
-#     walls = 'top'
-#     variable = mixing_length
-#     execute_on = 'initial'
-#     delta = 0.5
-#   []
-# []
-
-[Preconditioning]
-  [SMP]
-    type = SMP
-    full = true
-    petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -pc_factor_shift_type -ksp_type -ksp_rtol -ksp_atol'
-    petsc_options_value = 'lu       superlu_dist             NONZERO               gmres     1e-6     1e-8'
+    pressure = pressure
+    assumed_constant_cp = false
+    block = 0
   []
 []
+
+
+
 
 [Executioner]
   type = Steady
@@ -389,4 +419,9 @@ mu = 0.00089
 
 [Outputs]
   exodus = true
+  checkpoint = true
 []
+
+
+
+

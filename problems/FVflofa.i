@@ -12,19 +12,21 @@ outlet_pressure = 1e5
 inlet_value = -0.39
 
 [Mesh]
-  [gen]
-    type = GeneratedMeshGenerator
-    dim = 3
-    xmin = 0
-    xmax = 2.23e-3
-    ymin = 0
-    ymax = 6.65e-2
-    zmin = 0
-    zmax = 0.6
-    nx = 15
-    ny = 15
-    nz = 50
-  []
+  # [gen]
+  #   type = GeneratedMeshGenerator
+  #   dim = 3
+  #   xmin = 0
+  #   xmax = 2.23e-3
+  #   ymin = 0
+  #   ymax = 6.65e-2
+  #   zmin = -0.3
+  #   zmax = 0.3
+  #   nx = 15
+  #   ny = 15
+  #   nz = 50
+  # []
+
+  file = 'FVsteady_out.e'
 []
 
 [GlobalParams]
@@ -87,13 +89,18 @@ inlet_value = -0.39
   [wall_flux]
     type = ParsedFunction
     # expression = '4.104e5 * cos(pi * z / 0.7)'
-    expression = '4.104e3'
+    expression = 'if(t<=1, 8.16e4 * cos(pi * z / 0.7), 0)'
+  []
+  [enable_convec]
+    type = ParsedFunction
+    expression = 'if(t>1, 0, 8.16e4)'
   []
   [flow_decay_function]
     type = ParsedFunction
     expression = 'if(t <= 1 , -0.39 , (-(0.055 * exp(-(t-1)/1.4375)))/(997*0.063*0.00223))'
-    # expression = -0.39
+    # expression = ${inlet_value}
   []
+
 []
 
 [AuxKernels]
@@ -325,6 +332,17 @@ inlet_value = -0.39
     
   []
 
+  [walls_convection]
+    type = FVFunctorConvectiveHeatFluxBC
+    variable = T_fluid
+    boundary = 'left right'
+    heat_transfer_coefficient = enable_convec
+    T_bulk = T_fluid
+    T_solid = 330
+    is_solid = false
+
+  []
+
   # Inlet
   [inlet_u]
     type = INSFVInletVelocityBC
@@ -409,11 +427,11 @@ inlet_value = -0.39
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-2
+    dt = 1e-1
     optimal_iterations = 6
     # growth_factor = 1.5
   []
-  end_time = 8
+  end_time = 5
 
   nl_abs_tol = 1e-7
   nl_rel_tol = 1e-5
