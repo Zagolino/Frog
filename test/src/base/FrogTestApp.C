@@ -21,7 +21,7 @@ FrogTestApp::validParams()
   return params;
 }
 
-FrogTestApp::FrogTestApp(InputParameters parameters) : MooseApp(parameters)
+FrogTestApp::FrogTestApp(const InputParameters & parameters) : MooseApp(parameters)
 {
   FrogTestApp::registerAll(
       _factory, _action_factory, _syntax, getParam<bool>("allow_test_objects"));

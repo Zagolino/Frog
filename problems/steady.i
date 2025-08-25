@@ -5,7 +5,7 @@
     [bloco]
         type = GeneratedMeshGenerator
         dim = 3
-        xmax = 2.23e-3
+        xmax = 0.223e-2
         xmin = 0
         nx = 20
         ymax = 6.65e-2
@@ -60,7 +60,7 @@
         type = INSADStabilized3Eqn
         velocity = velocity
         pressure = p
-        temperature = 300
+        temperature = 311.15
     []
 
 []

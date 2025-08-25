@@ -12,19 +12,9 @@ outlet_pressure = 1.7e5
 inlet_value = -1.5
 
 [Mesh]
-  [gen]
-    type = GeneratedMeshGenerator
-    dim = 3
-    xmin = 0
-    xmax = 6.65e-2
-    ymin = 0
-    ymax = 2.23e-3
-    zmin = -0.3
-    zmax = 0.3
-    nx = 15
-    ny = 15
-    nz = 50
-  []
+  
+
+  file = 'FVflofa_out_sem flofa_so residual.e'
 []
 
 [GlobalParams]
@@ -86,7 +76,7 @@ inlet_value = -1.5
 [Functions]
   [wall_flux]
     type = ParsedFunction
-    expression = '5.51e4 * cos(pi * z / 0.7)'
+    expression = 'min(5.51e4 * cos(pi * z / 0.7), 1e6)' #5.51*5
     
   []
   [flow_decay_function]
@@ -331,8 +321,8 @@ inlet_value = -1.5
     type = FVFunctionNeumannBC
     variable = T_fluid
     boundary = 'top bottom'
-    # function = wall_flux
-    function = 0
+    function = wall_flux
+    # function = 0
     
   []
 
@@ -440,14 +430,15 @@ inlet_value = -1.5
   nl_rel_tol = 1e-6
   scaling_group_variables = 'vel_x vel_y vel_z; pressure; T_fluid'
   automatic_scaling = true
-  relaxation_factor = 0.5
+ 
+  relaxation_factor = 0.5  # Reduzido para maior estabilidade
+  
 []
 
 
 [Outputs]
   exodus = true
   checkpoint = true
-
 []
 
 

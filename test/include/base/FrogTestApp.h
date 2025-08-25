@@ -16,7 +16,7 @@ class FrogTestApp : public MooseApp
 public:
   static InputParameters validParams();
 
-  FrogTestApp(InputParameters parameters);
+  FrogTestApp(const InputParameters & parameters);
   virtual ~FrogTestApp();
 
   static void registerApps();

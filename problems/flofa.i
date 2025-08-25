@@ -164,7 +164,7 @@
         boundary = 'front'
         function_x = 0
         function_y = 0
-        function_z = '0.055/(997*0.063*0.00223)'
+        function_z = '0.13/(997*0.063*0.00223)'
     []
     [inlet_T]
         type = DirichletBC

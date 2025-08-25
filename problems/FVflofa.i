@@ -8,17 +8,17 @@ advected_interp_method = 'upwind'
 
 
 
-outlet_pressure = 1e5
-inlet_value = -0.39
+outlet_pressure = 1.7e5
+inlet_value = -1.5
 
 [Mesh]
   # [gen]
   #   type = GeneratedMeshGenerator
   #   dim = 3
   #   xmin = 0
-  #   xmax = 2.23e-3
+  #   xmax = 6.65e-2
   #   ymin = 0
-  #   ymax = 6.65e-2
+  #   ymax = 2.23e-3
   #   zmin = -0.3
   #   zmax = 0.3
   #   nx = 15
@@ -64,7 +64,7 @@ inlet_value = -0.39
   []
   [T_fluid]
     type = INSFVEnergyVariable
-    initial_condition = 300
+    initial_condition = 311.15
   []
 []
 
@@ -88,16 +88,18 @@ inlet_value = -0.39
 [Functions]
   [wall_flux]
     type = ParsedFunction
-    # expression = '4.104e5 * cos(pi * z / 0.7)'
-    expression = 'if(t<=1, 8.16e4 * cos(pi * z / 0.7), 0)'
+    # expression = '5.51e5 * cos(pi * z / 0.7)'
+    expression = 'if(t <= 0.3, (5.51e5 * cos(pi * z / 0.7)) * t / 0.3, 5.51e5 * cos(pi * z / 0.7))'
+    # expression = 'if(t <= 0.3, (5.51e5 * cos(pi * z / 0.7)) * t / 0.3, if(t <= 1.0, 5.51e5 * cos(pi * z / 0.7), 0.0))'
   []
   [enable_convec]
     type = ParsedFunction
-    expression = 'if(t>1, 0, 8.16e4)'
+    expression = 'if(t<=1, 0, 5.51e5*(0.0299*exp(-2.658*t)+0.0825*exp(-0.4619*t)+0.1550*exp(-0.06642*t)+0.0802*exp(-0.006476*t)+0.0690*exp(-0.0006214*t)+0.0480*exp(-0.00002997*t)))'
   []
   [flow_decay_function]
     type = ParsedFunction
-    expression = 'if(t <= 1 , -0.39 , (-(0.055 * exp(-(t-1)/1.4375)))/(997*0.063*0.00223))'
+    expression = 'if(t <= 1 , -1.5 , -1.5 * exp(-(t/1)/(1.0)))'
+    # expression = 'if(t <= 1, -1.5, -1.5*(0.0299*exp(-2.658*t)+0.0825*exp(-0.4619*t)+0.1550*exp(-0.06642*t)+0.0802*exp(-0.006476*t)+0.0690*exp(-0.0006214*t)+0.0480*exp(-0.00002997*t)))'
     # expression = ${inlet_value}
   []
 
@@ -166,6 +168,7 @@ inlet_value = -0.39
     mu = mu
     momentum_component = 'x'
     variable_interp_method = 'skewness-corrected'
+    limit_interpolation = true
   []
   [u_pressure]
     type = INSFVMomentumPressure
@@ -205,6 +208,7 @@ inlet_value = -0.39
     momentum_component = 'y'
     mu = mu
     variable_interp_method = 'skewness-corrected'
+    limit_interpolation = true
   []
   [v_pressure]
     type = INSFVMomentumPressure
@@ -244,6 +248,7 @@ inlet_value = -0.39
     momentum_component = 'z'
     mu = mu
     variable_interp_method = 'skewness-corrected'
+    limit_interpolation = true
   []
   [w_pressure]
     type = INSFVMomentumPressure
@@ -320,27 +325,25 @@ inlet_value = -0.39
   [walls_T]
     type = FVNeumannBC
     variable = T_fluid
-    boundary = 'top bottom'
+    boundary = 'left right'
     value = 0
   []
   [walls_Tflux]
     type = FVFunctionNeumannBC
     variable = T_fluid
-    boundary = 'left right'
+    boundary = 'top bottom'
     function = wall_flux
     # function = 0
     
   []
 
-  [walls_convection]
-    type = FVFunctorConvectiveHeatFluxBC
+  [walls_convecflux]
+    type = FVFunctionNeumannBC
     variable = T_fluid
-    boundary = 'left right'
-    heat_transfer_coefficient = enable_convec
-    T_bulk = T_fluid
-    T_solid = 330
-    is_solid = false
-
+    boundary = 'top bottom'
+    function = enable_convec
+    # function = 0
+    
   []
 
   # Inlet
@@ -361,12 +364,13 @@ inlet_value = -0.39
     variable = vel_z
     boundary = 'front'
     functor = flow_decay_function
+    # functor = -1.5
   []
   [inlet_T]
     type = FVDirichletBC
     variable = T_fluid
     boundary = 'front'
-    value = 300
+    value = 311.15
   []
 
   [outlet_p]
@@ -416,7 +420,12 @@ inlet_value = -0.39
   []
 []
 
-
+[Preconditioning]
+  [SMP]
+    type = SMP
+    full = true
+  []
+[]
 
 
 [Executioner]
@@ -427,11 +436,11 @@ inlet_value = -0.39
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-1
+    dt = 1e-2
     optimal_iterations = 6
     # growth_factor = 1.5
   []
-  end_time = 5
+  end_time = 3
 
   nl_abs_tol = 1e-7
   nl_rel_tol = 1e-5
